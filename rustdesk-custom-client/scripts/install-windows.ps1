@@ -8,7 +8,8 @@ if (-not (Test-Path $Installer)) {
 $IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $IsAdmin) { throw 'Run this installer from an elevated PowerShell window.' }
 
-Start-Process -FilePath $Installer -ArgumentList '--silent-install' -Wait
+$InstallProcess = Start-Process -FilePath $Installer -ArgumentList '--silent-install' -Wait -PassThru
+if ($InstallProcess.ExitCode -ne 0) { throw "RustDesk installation failed with exit code $($InstallProcess.ExitCode)." }
 $Candidates = @(
     (Join-Path $env:ProgramFiles 'RustDesk\RustDesk.exe'),
     (Join-Path $env:ProgramFiles 'RustDesk\rustdesk.exe'),
@@ -17,5 +18,6 @@ $Candidates = @(
 )
 $Client = $Candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $Client) { throw 'Installation finished, but the RustDesk executable was not found in Program Files.' }
-Start-Process -FilePath $Client -ArgumentList '--password',$env:UNITY_SUPPORT_PASSWORD -Wait
+& $Client --password $env:UNITY_SUPPORT_PASSWORD
+if ($LASTEXITCODE -ne 0) { throw "RustDesk password configuration failed with exit code $LASTEXITCODE." }
 Write-Host 'Unity AV Support RustDesk is installed and unattended access is configured.'

@@ -13,4 +13,4 @@ The relay's private key, live database, and `.env` configuration are intentional
 
 The install scripts require `UNITY_SUPPORT_PASSWORD` to be set locally before configuring unattended access. Do not commit this value or reuse one shared password across all client machines. Set a unique unattended password per endpoint where supported.
 
-These scripts are source-build helpers, not prebuilt one-click installers. Platform packages must be built and signed for their target operating systems.
+GitHub Actions builds unsigned test installer bundles for Windows x64, Intel and Apple Silicon macOS, and Debian/Ubuntu amd64. See [Build and download installers](rustdesk-custom-client/BUILDING.md) for workflow instructions, artifacts, signing requirements, and runtime checks.

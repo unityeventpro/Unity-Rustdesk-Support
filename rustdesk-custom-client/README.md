@@ -33,7 +33,9 @@ These compiled defaults apply to fresh installs. Existing RustDesk client settin
 
 ## Build requirements and commands
 
-RustDesk currently builds the desktop Flutter client with platform-specific toolchains. This Codex host is Debian 13 x86_64, has Rust installed, but does not have Flutter installed. It can produce Linux packages after the official Linux dependencies and Flutter SDK are installed. Windows builds require a Windows/MSVC environment, and macOS builds require macOS/Xcode. The build tools are too platform-specific to make a reliable Windows or macOS installer from this Linux host.
+Use the repository's [GitHub Actions build workflow](BUILDING.md) to build downloadable test installers on native Windows, macOS, and Linux runners. It generates Windows x64 EXE, Intel and Apple Silicon macOS DMG, and Debian/Ubuntu amd64 DEB bundles, plus a corresponding source archive. Initial packages are unsigned and require platform testing before distribution.
+
+For local builds, RustDesk's desktop Flutter client requires platform-specific toolchains: Windows/MSVC for Windows, macOS/Xcode for macOS, and the Linux build dependencies for Linux. This kit does not assume the current computer has those toolchains installed.
 
 From the customized source tree, follow the official platform build guide and run `python3 build.py --flutter` on that platform:
 

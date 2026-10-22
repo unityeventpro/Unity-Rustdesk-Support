@@ -12,3 +12,5 @@ rustdesk-server/data/*
 *.sqlite*
 .DS_Store
 Thumbs.db
+__pycache__/
+unity-dist/

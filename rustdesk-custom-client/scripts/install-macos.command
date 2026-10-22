@@ -12,5 +12,5 @@ trap cleanup EXIT
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT" -quiet
 [[ -d "$MOUNT/$APP_NAME.app" ]] || { echo "Expected $APP_NAME.app inside the disk image." >&2; exit 1; }
 sudo ditto "$MOUNT/$APP_NAME.app" "/Applications/$APP_NAME.app"
-"/Applications/$APP_NAME.app/Contents/MacOS/$APP_NAME" --password "$UNITY_SUPPORT_PASSWORD"
+sudo "/Applications/$APP_NAME.app/Contents/MacOS/$APP_NAME" --password "$UNITY_SUPPORT_PASSWORD"
 echo 'Unity AV Support RustDesk is installed and unattended access is configured.'

@@ -1,0 +1,714 @@
+# Adapted from rustdesk/rustdesk at 828d1101afd2e656eb1c1d18511009bdf5336238; see BUILDING.md.
+---
+name: Build Unity AV Support installers
+'on':
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platforms to build
+        type: choice
+        default: all
+        options:
+        - all
+        - windows
+        - macos
+        - linux
+  push:
+    branches:
+    - codex/rustdesk-installers
+    paths:
+    - ".github/workflows/**"
+    - rustdesk-custom-client/**
+permissions:
+  contents: read
+concurrency:
+  group: unity-installers-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  SCITER_RUST_VERSION: '1.75'
+  RUST_VERSION: '1.75'
+  MAC_RUST_VERSION: '1.81'
+  LLVM_VERSION: 15.0.6
+  FLUTTER_VERSION: 3.24.5
+  VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
+  VCPKG_COMMIT_ID: 9e593bb18ea69cc5095e012465dcd675a822ed0d
+  VCPKG_CMAKE_VERSION: 4.3.0
+  VERSION: 1.5.1
+  UPLOAD_ARTIFACT: 'true'
+  PUBLISH_UPDATE_METADATA: 'false'
+  RUSTDESK_SOURCE_REF: 828d1101afd2e656eb1c1d18511009bdf5336238
+jobs:
+  generate-bridge:
+    uses: "./.github/workflows/unity-bridge.yml"
+  build-RustDeskTempTopMostWindow:
+    uses: "./.github/workflows/unity-topmost.yml"
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+        - target: windows-2022
+          platform: x64
+    with:
+      upload-artifact: true
+      target: "${{ matrix.job.target }}"
+      configuration: Release
+      platform: "${{ matrix.job.platform }}"
+      target_version: Windows10
+    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
+      == 'windows'
+  source:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout pinned RustDesk source
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        repository: rustdesk/rustdesk
+        ref: 828d1101afd2e656eb1c1d18511009bdf5336238
+        submodules: recursive
+        persist-credentials: false
+    - name: Checkout Unity build kit
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        path: ".unity-kit"
+        persist-credentials: false
+    - name: Apply Unity logo and server defaults
+      shell: bash
+      run: bash .unity-kit/rustdesk-custom-client/scripts/apply-branding.sh "$GITHUB_WORKSPACE"
+    - name: Archive corresponding modified source
+      shell: bash
+      run: tar --exclude=".git" -czf "$RUNNER_TEMP/UnityAVSupport-RustDesk-source.tar.gz"
+        .
+    - name: Upload corresponding modified source
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: UnityAVSupport-RustDesk-source
+        path: "${{ runner.temp }}/UnityAVSupport-RustDesk-source.tar.gz"
+        if-no-files-found: error
+        retention-days: 14
+  build-for-windows-flutter:
+    name: "${{ matrix.job.target }}"
+    needs:
+    - build-RustDeskTempTopMostWindow
+    - generate-bridge
+    runs-on: "${{ matrix.job.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+        - target: x86_64-pc-windows-msvc
+          os: windows-2022
+          arch: x86_64
+          flutter-arch: x64
+          vcpkg-triplet: x64-windows-static
+          build-args: "--vram"
+    steps:
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+    - name: Checkout pinned RustDesk source
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        repository: rustdesk/rustdesk
+        ref: 828d1101afd2e656eb1c1d18511009bdf5336238
+        submodules: recursive
+        persist-credentials: false
+    - name: Checkout Unity build kit
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        path: ".unity-kit"
+        persist-credentials: false
+    - name: Apply Unity logo and server defaults
+      shell: bash
+      run: bash .unity-kit/rustdesk-custom-client/scripts/apply-branding.sh "$GITHUB_WORKSPACE"
+    - name: Restore bridge files
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: bridge-artifact
+        path: "./"
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0
+      with:
+        version: "${{ env.LLVM_VERSION }}"
+    - name: Install flutter
+      id: flutter
+      uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225
+      with:
+        channel: stable
+        flutter-version: "${{ env.FLUTTER_VERSION }}"
+        architecture: x64
+    - name: Replace engine with rustdesk custom flutter engine
+      if: "${{ matrix.job.arch == 'x86_64' }}"
+      run: |
+        flutter doctor -v
+        flutter precache --windows
+        Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+        Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
+        mv -Force windows-x64-release/*  C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+    - name: Patch flutter
+      if: "${{ matrix.job.arch == 'x86_64' }}"
+      shell: bash
+      run: |
+        cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter)))
+        cd $(dirname $(dirname $(which flutter)))
+        if [[ "3.24.5" == ${{env.FLUTTER_VERSION}} ]]; then
+          git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
+        fi
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+      with:
+        toolchain: "${{ env.SCITER_RUST_VERSION }}"
+        targets: "${{ matrix.job.target }}"
+        components: rustfmt
+    - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+      with:
+        prefix-key: "${{ matrix.job.os }}"
+    - name: Setup vcpkg with Github Actions binary cache
+      uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2
+      with:
+        vcpkgDirectory: C:\vcpkg
+        vcpkgGitCommitId: "${{ env.VCPKG_COMMIT_ID }}"
+        doNotCache: false
+    - name: Install vcpkg dependencies
+      env:
+        VCPKG_DEFAULT_HOST_TRIPLET: "${{ matrix.job.vcpkg-triplet }}"
+      run: |
+        if ! $VCPKG_ROOT/vcpkg \
+          install \
+          --triplet ${{ matrix.job.vcpkg-triplet }} \
+          --x-install-root="$VCPKG_ROOT/installed"; then
+          find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+            echo "$_1:"
+            echo "======"
+            cat "$_1"
+            echo "======"
+            echo ""
+          done
+          exit 1
+        fi
+        head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
+      shell: bash
+    - name: Generate Unity launcher icons
+      shell: bash
+      run: |-
+        cd flutter
+        flutter pub get
+        flutter pub run flutter_launcher_icons
+    - name: Build rustdesk
+      run: |
+        # Windows: build RustDesk
+        # --hwcodec is shared by all Windows targets; per-target extras (e.g. --vram) come from the matrix
+        python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec ${{ matrix.job.build-args }}
+        mv ./flutter/build/windows/${{ matrix.job.flutter-arch }}/runner/Release ./rustdesk
+
+        # Download usbmmidd_v2.zip and extract it to ./rustdesk
+        Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
+        Expand-Archive usbmmidd_v2.zip -DestinationPath .
+        Remove-Item -Path usbmmidd_v2\Win32 -Recurse
+        Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
+        mv -Force .\usbmmidd_v2 ./rustdesk
+
+        # Download printer driver files and extract them to ./rustdesk
+        try {
+          Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/rustdesk_printer_driver_v4-1.4.zip -OutFile rustdesk_printer_driver_v4-1.4.zip
+          Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/printer_driver_adapter.zip -OutFile printer_driver_adapter.zip
+          Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/sha256sums -OutFile sha256sums
+
+          # Check and move the files
+          $checksum_driver = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*rustdesk_printer_driver_v4-1.4\.zip$').Matches.Groups[1].Value
+          $downloadsum_driver = Get-FileHash -Path rustdesk_printer_driver_v4-1.4.zip -Algorithm SHA256
+          $checksum_adapter = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*printer_driver_adapter\.zip$').Matches.Groups[1].Value
+          $downloadsum_adapter = Get-FileHash -Path printer_driver_adapter.zip -Algorithm SHA256
+          if ($checksum_driver -eq $downloadsum_driver.Hash -and $checksum_adapter -eq $downloadsum_adapter.Hash) {
+              Write-Output "rustdesk_printer_driver_v4-1.4, checksums match, extract the file."
+              Expand-Archive rustdesk_printer_driver_v4-1.4.zip -DestinationPath .
+              mkdir ./rustdesk/drivers
+              mv -Force .\rustdesk_printer_driver_v4-1.4 ./rustdesk/drivers/RustDeskPrinterDriver
+              Expand-Archive printer_driver_adapter.zip -DestinationPath .
+              mv -Force .\printer_driver_adapter.dll ./rustdesk
+          } elseif ($checksum_driver -ne $downloadsum_driver.Hash) {
+              Write-Output "rustdesk_printer_driver_v4-1.4, checksums do not match, ignore the file."
+          } else {
+              Write-Output "printer_driver_adapter.dll, checksums do not match, ignore the file."
+          }
+        } catch {
+            Write-Host "Ingore the printer driver error."
+        }
+    - name: find Runner.res
+      continue-on-error: true
+      shell: bash
+      run: |
+        runner_res=$(find . -name "Runner.res");
+        if [ "$runner_res" == "" ]; then
+          echo "Runner.res: not found";
+        else
+          echo "Runner.res: $runner_res";
+          cp $runner_res ./libs/portable/Runner.res;
+          echo "list ./libs/portable/Runner.res";
+          ls -l ./libs/portable/Runner.res;
+        fi
+    - name: Download RustDeskTempTopMostWindow artifacts
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: topmostwindow-artifacts-x64
+        path: "./rustdesk"
+    - name: Build self-extracted executable
+      shell: bash
+      if: env.UPLOAD_ARTIFACT == 'true'
+      run: |
+        sed -i '/dpiAware/d' res/manifest.xml
+        pushd ./libs/portable
+        pip3 install -r requirements.txt
+        python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+        popd
+        mkdir -p ./SignOutput
+        mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
+    - name: Bundle installer and install helper
+      shell: bash
+      run: python3 .unity-kit/rustdesk-custom-client/scripts/package-build.py --platform
+        windows --arch "${{ matrix.job.arch }}" --source-ref "$RUSTDESK_SOURCE_REF"
+    - name: Upload Unity installer bundle
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: UnityAVSupport-windows-${{ matrix.job.arch }}-unsigned
+        path: unity-dist/
+        if-no-files-found: error
+        retention-days: 14
+    timeout-minutes: 180
+    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
+      == 'windows'
+  build-for-macOS:
+    name: "${{ matrix.job.target }}"
+    runs-on: "${{ matrix.job.os }}"
+    needs:
+    - generate-bridge
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+        - target: x86_64-apple-darwin
+          os: macos-15-intel
+          extra-build-args: ''
+          extra-cargo-features: ''
+          arch: x86_64
+          vcpkg-triplet: x64-osx
+        - target: aarch64-apple-darwin
+          os: macos-14
+          extra-build-args: "--screencapturekit"
+          extra-cargo-features: ",screencapturekit"
+          arch: aarch64
+          vcpkg-triplet: arm64-osx
+    steps:
+    - name: Install build runtime
+      run: |
+        brew install llvm create-dmg
+        # pkg-config is handled in a separate step, because it may be already installed by `macos-latest`(14.7.1) runner
+        if command -v pkg-config &>/dev/null; then
+            echo "pkg-config is already installed"
+        else
+            brew install pkg-config
+        fi
+    - name: Install NASM
+      run: |
+        # Install NASM 2.16.x from official release.
+        # Do NOT use `brew install nasm` which installs NASM 3.x.
+        # NASM 3.x is a complete rewrite with incompatible CLI options and removed features.
+        # aom and other multimedia libraries require NASM 2.x for x86/x86_64 assembly.
+        wget https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
+        unzip nasm-2.16.03-macosx.zip
+        sudo cp nasm-2.16.03/nasm /usr/local/bin/nasm
+        nasm --version
+    - name: Install flutter
+      uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+      with:
+        channel: stable
+        flutter-version: "${{ env.FLUTTER_VERSION }}"
+    - name: Patch flutter
+      run: |
+        cd $(dirname $(dirname $(which flutter)))
+        if [[ "3.24.5" == ${{env.FLUTTER_VERSION}} ]]; then
+          git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff
+        fi
+    - name: Workaround for flutter issue
+      shell: bash
+      run: |
+        cd "$(dirname "$(which flutter)")"
+        # https://github.com/flutter/flutter/issues/133533
+        sed -i -e 's/_setFramesEnabledState(false);/\/\/_setFramesEnabledState(false);/g' ../packages/flutter/lib/src/scheduler/binding.dart
+        grep -n '_setFramesEnabledState(false);' ../packages/flutter/lib/src/scheduler/binding.dart
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+      with:
+        toolchain: "${{ env.MAC_RUST_VERSION }}"
+        targets: "${{ matrix.job.target }}"
+        components: rustfmt
+    - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+      with:
+        prefix-key: "${{ matrix.job.os }}"
+    - name: Restore bridge files
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: bridge-artifact
+        path: "./"
+    - name: Setup vcpkg with Github Actions binary cache
+      uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2
+      with:
+        vcpkgGitCommitId: "${{ env.VCPKG_COMMIT_ID }}"
+        doNotCache: false
+    - name: Install vcpkg dependencies
+      run: |
+        if ! $VCPKG_ROOT/vcpkg \
+          install \
+          --x-install-root="$VCPKG_ROOT/installed"; then
+          find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+            echo "$_1:"
+            echo "======"
+            cat "$_1"
+            echo "======"
+            echo ""
+          done
+          exit 1
+        fi
+        head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
+    - name: Show version information (Rust, cargo, Clang)
+      shell: bash
+      run: |
+        clang --version || true
+        rustup -V
+        rustup toolchain list
+        rustup default
+        cargo -V
+        rustc -V
+    - name: Generate Unity launcher icons
+      shell: bash
+      run: |-
+        cd flutter
+        flutter pub get
+        flutter pub run flutter_launcher_icons
+    - name: Build rustdesk
+      run: |
+        if [ "${{ matrix.job.target }}" = "aarch64-apple-darwin" ]; then
+          MIN_MACOS_VERSION="12.3"
+          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET\=[0-9]*.[0-9]*/MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}/" build.py
+          sed -i -e "s/platform :osx, '.*'/platform :osx, '${MIN_MACOS_VERSION}'/" flutter/macos/Podfile
+          sed -i -e "s/osx_minimum_system_version = \"[0-9]*.[0-9]*\"/osx_minimum_system_version = \"${MIN_MACOS_VERSION}\"/" Cargo.toml
+          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9]*.[0-9]*;/MACOSX_DEPLOYMENT_TARGET = ${MIN_MACOS_VERSION};/" flutter/macos/Runner.xcodeproj/project.pbxproj
+          echo "MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}" >> "$GITHUB_ENV"
+        fi
+        ./build.py --flutter --hwcodec --unix-file-copy-paste ${{ matrix.job.extra-build-args }}
+    - name: create unsigned dmg
+      if: env.UPLOAD_ARTIFACT == 'true'
+      run: |
+        CREATE_DMG="$(command -v create-dmg)"
+        CREATE_DMG="$(readlink -f "$CREATE_DMG")"
+        sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
+        create-dmg --icon "RustDesk.app" 200 190 --hide-extension "RustDesk.app" --window-size 800 400 --app-drop-link 600 185 rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.dmg ./flutter/build/macos/Build/Products/Release/RustDesk.app
+    - name: Bundle installer and install helper
+      shell: bash
+      run: python3 .unity-kit/rustdesk-custom-client/scripts/package-build.py --platform
+        macos --arch "${{ matrix.job.arch }}" --source-ref "$RUSTDESK_SOURCE_REF"
+    - name: Upload Unity installer bundle
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: UnityAVSupport-macos-${{ matrix.job.arch }}-unsigned
+        path: unity-dist/
+        if-no-files-found: error
+        retention-days: 14
+    timeout-minutes: 180
+    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
+      == 'macos'
+  build-rustdesk-linux:
+    needs:
+    - generate-bridge
+    name: build rustdesk linux ${{ matrix.job.target }}
+    runs-on: "${{ matrix.job.on }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+        - arch: x86_64
+          target: x86_64-unknown-linux-gnu
+          distro: ubuntu18.04
+          deb_arch: amd64
+          vcpkg-triplet: x64-linux
+          'on': ubuntu-22.04
+    steps:
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+    - name: Maximize build space
+      run: |
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/dotnet
+        sudo apt-get update -y
+        sudo apt-get install -y nasm
+        if [[ "${{ matrix.job.arch }}" == "x86_64" ]]; then
+          sudo apt-get install -y qemu-user-static
+        fi
+    - name: Checkout pinned RustDesk source
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        repository: rustdesk/rustdesk
+        ref: 828d1101afd2e656eb1c1d18511009bdf5336238
+        submodules: recursive
+        persist-credentials: false
+    - name: Checkout Unity build kit
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        path: ".unity-kit"
+        persist-credentials: false
+    - name: Apply Unity logo and server defaults
+      shell: bash
+      run: bash .unity-kit/rustdesk-custom-client/scripts/apply-branding.sh "$GITHUB_WORKSPACE"
+    - name: Set Swap Space
+      uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c
+      with:
+        swap-size-gb: 12
+    - name: Free Space
+      run: |
+        df -h
+        free -m
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+      with:
+        toolchain: "${{ env.RUST_VERSION }}"
+        targets: "${{ matrix.job.target }}"
+        components: rustfmt
+    - name: Save Rust toolchain version
+      run: |
+        RUST_TOOLCHAIN_VERSION=$(cargo --version | awk '{print $2}')
+        echo "RUST_TOOLCHAIN_VERSION=$RUST_TOOLCHAIN_VERSION" >> $GITHUB_ENV
+    - name: Disable rust bridge build
+      run: |
+        # only build cdylib
+        sed -i  "s/\[\"cdylib\", \"staticlib\", \"rlib\"\]/\[\"cdylib\"\]/g" Cargo.toml
+    - name: Restore bridge files
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: bridge-artifact
+        path: "./"
+    - name: Install CMake for vcpkg on Linux ARM64
+      run: |
+        python3 -m pip install --user "cmake==${VCPKG_CMAKE_VERSION}"
+        user_base="$(python3 -m site --user-base)"
+        "${user_base}/bin/cmake" --version
+        echo "${user_base}/bin" >> "${GITHUB_PATH}"
+    - name: Setup vcpkg with Github Actions binary cache
+      uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2
+      with:
+        vcpkgDirectory: "/opt/artifacts/vcpkg"
+        vcpkgGitCommitId: "${{ env.VCPKG_COMMIT_ID }}"
+        doNotCache: false
+    - name: Install vcpkg dependencies
+      run: |
+        sudo apt install -y libva-dev && apt show libva-dev
+        if ! $VCPKG_ROOT/vcpkg \
+          install \
+          --triplet ${{ matrix.job.vcpkg-triplet }} \
+          --x-install-root="$VCPKG_ROOT/installed"; then
+          find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+            echo "$_1:"
+            echo "======"
+            cat "$_1"
+            echo "======"
+            echo ""
+          done
+          exit 1
+        fi
+        head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
+      shell: bash
+    - name: Restore bridge files
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: bridge-artifact
+        path: "./"
+    - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8
+      name: Build rustdesk
+      id: vcpkg
+      with:
+        arch: "${{ matrix.job.arch }}"
+        distro: "${{ matrix.job.distro }}"
+        githubToken: "${{ github.token }}"
+        setup: |
+          ls -l "${PWD}"
+          ls -l /opt/artifacts/vcpkg/installed
+        dockerRunArgs: |
+          --volume "${PWD}:/workspace"
+          --volume "/opt/artifacts:/opt/artifacts"
+        shell: "/bin/bash"
+        install: |
+          apt-get update -y
+          echo -e "installing deps"
+          apt-get install -y \
+             build-essential \
+             clang \
+             cmake \
+             curl \
+             gcc \
+             git \
+             g++ \
+             libayatana-appindicator3-dev \
+             libasound2-dev \
+             libclang-10-dev \
+             libgstreamer1.0-dev \
+             libgstreamer-plugins-base1.0-dev \
+             libgtk-3-dev \
+             libpulse-dev \
+             libva-dev \
+             libxcb-randr0-dev \
+             libxcb-shape0-dev \
+             libxcb-xfixes0-dev \
+             libxdo-dev \
+             libxfixes-dev \
+             llvm-10-dev \
+             nasm \
+             ninja-build \
+             pkg-config \
+             tree \
+             python3 \
+             rpm \
+             unzip \
+             wget \
+             xz-utils \
+             libssl-dev
+          # we have libopus compiled by us.
+          apt-get remove -y libopus-dev || true
+          # output devs
+          ls -l ./
+          tree -L 3 /opt/artifacts/vcpkg/installed
+        run: |
+          # disable git safe.directory
+          git config --global --add safe.directory "*"
+          # rust
+          pushd /opt
+          # do not use rustup, because memory overflow in qemu
+          wget -O rust.tar.gz https://static.rust-lang.org/dist/rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}.tar.gz
+          tar -zxvf rust.tar.gz > /dev/null && rm rust.tar.gz
+          cd rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }} && ./install.sh
+          rm -rf rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}
+          # edit config
+          mkdir -p ~/.cargo/
+          echo """
+            [source.crates-io]
+            registry = 'https://github.com/rust-lang/crates.io-index'
+          """ > ~/.cargo/config
+          cat ~/.cargo/config
+          # start build
+          pushd /workspace
+          export VCPKG_ROOT=/opt/artifacts/vcpkg
+          if [[ "${{ matrix.job.arch }}" == "aarch64" ]]; then
+            export JOBS="--jobs 3"
+          else
+            export JOBS=""
+          fi
+          echo $JOBS
+          cargo build --locked --lib $JOBS --features hwcodec,flutter,unix-file-copy-paste --release
+          rm -rf target/release/deps target/release/build
+          rm -rf ~/.cargo
+
+          # Setup Flutter
+          # disable git safe.directory
+          git config --global --add safe.directory "*"
+          pushd /workspace
+          case ${{ matrix.job.arch }} in
+            aarch64)
+              export PATH=/opt/flutter-elinux/bin:$PATH
+              sed -i "s/flutter build linux --release/flutter-elinux build linux --verbose/g" ./build.py
+              sed -i "s/x64\/release/arm64\/release/g" ./build.py
+            ;;
+            x86_64)
+              export PATH=/opt/flutter/bin:$PATH
+            ;;
+          esac
+          popd
+          pushd /opt
+          wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz
+          tar xf flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz
+          case ${{ matrix.job.arch }} in
+            aarch64)
+              # clone repo and reset to flutter ${{ env.FLUTTER_VERSION }}
+              git clone https://github.com/sony/flutter-elinux.git || true
+              pushd flutter-elinux
+                git fetch
+                git reset --hard ${{ env.FLUTTER_VERSION }}
+                bin/flutter-elinux doctor -v
+                bin/flutter-elinux precache --linux
+              popd
+              cp -R flutter/bin/cache/artifacts/engine/linux-x64/shader_lib flutter-elinux/flutter/bin/cache/artifacts/engine/linux-arm64
+              rm -rf flutter
+            ;;
+            x86_64)
+              flutter doctor -v
+            ;;
+          esac
+
+          if [[ "3.24.5" == ${{ env.FLUTTER_VERSION }} ]]; then
+            case ${{ matrix.job.arch }} in
+              aarch64)
+                pushd /opt/flutter-elinux/flutter
+              ;;
+              x86_64)
+                pushd /opt/flutter
+              ;;
+            esac
+            git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff
+            popd
+          fi
+
+          # build flutter
+          pushd /workspace
+          export CARGO_INCREMENTAL=0
+          export DEB_ARCH=${{ matrix.job.deb_arch }}
+          (cd flutter && flutter pub get && flutter pub run flutter_launcher_icons)
+          python3 ./build.py --flutter --skip-cargo
+          for name in rustdesk*??.deb; do
+            mv "$name" "${name%%.deb}-${{ matrix.job.arch }}.deb"
+          done
+
+          # rpm package
+          echo -e "start packaging fedora package"
+          pushd /workspace
+          case ${{ matrix.job.arch }} in
+            aarch64)
+              sed -i "s/linux\/x64/linux\/arm64/g" ./res/rpm-flutter.spec
+              ;;
+          esac
+          HBB=`pwd` rpmbuild ./res/rpm-flutter.spec -bb
+          pushd ~/rpmbuild/RPMS/${{ matrix.job.arch }}
+          for name in rustdesk*??.rpm; do
+              mv "$name" /workspace/"${name%%.rpm}.rpm"
+          done
+
+          # rpm suse package
+          echo -e "start packaging suse package"
+          pushd /workspace
+          case ${{ matrix.job.arch }} in
+            aarch64)
+              sed -i "s/linux\/x64/linux\/arm64/g" ./res/rpm-flutter-suse.spec
+              ;;
+          esac
+          HBB=`pwd` rpmbuild ./res/rpm-flutter-suse.spec -bb
+          pushd ~/rpmbuild/RPMS/${{ matrix.job.arch }}
+          for name in rustdesk*??.rpm; do
+              mv "$name" /workspace/"${name%%.rpm}-suse.rpm"
+          done
+    - name: Bundle installer and install helper
+      shell: bash
+      run: python3 .unity-kit/rustdesk-custom-client/scripts/package-build.py --platform
+        linux --arch "${{ matrix.job.arch }}" --source-ref "$RUSTDESK_SOURCE_REF"
+    - name: Upload Unity installer bundle
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: UnityAVSupport-linux-${{ matrix.job.arch }}-unsigned
+        path: unity-dist/
+        if-no-files-found: error
+        retention-days: 14
+    timeout-minutes: 180
+    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
+      == 'linux'
