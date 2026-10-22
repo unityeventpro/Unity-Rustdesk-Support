@@ -38,7 +38,9 @@ def package(platform, arch, source_ref, root=Path('.'), kit=None):
     hashes = []
     for path in sorted(output.iterdir()):
         hashes.append(hashlib.sha256(path.read_bytes()).hexdigest() + '  ' + path.name)
-    (output / 'SHA256SUMS').write_text('\n'.join(hashes) + '\n')
+    # Keep checksum lists portable to Unix shasum/sha256sum, including on Windows.
+    with (output / 'SHA256SUMS').open('w', encoding='utf-8', newline='\n') as checksum_file:
+        checksum_file.write('\n'.join(hashes) + '\n')
     return output
 
 
