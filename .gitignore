@@ -1,0 +1,14 @@
+# Runtime configuration and RustDesk server identity
+.env
+rustdesk-server/.env
+rustdesk-server/data/*
+!rustdesk-server/data/.gitkeep
+
+# Build products and local state
+*.deb
+*.dmg
+*.exe
+*.msi
+*.sqlite*
+.DS_Store
+Thumbs.db
