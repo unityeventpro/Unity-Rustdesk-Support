@@ -4,7 +4,7 @@ This Docker Compose setup runs RustDesk's ID/rendezvous service (`hbbs`) and rel
 
 ## 1. Set the public address
 
-Copy `.env.example` to `.env` and replace the example hostname with a DNS name or stable public IPv4 address that remote clients can reach. A dynamic DNS hostname is recommended for a home connection with a changing public IP.
+Copy `.env.example` to `.env`. It is prefilled with `codehalter.does-it.net`; change it if your public DNS name changes. A dynamic DNS hostname is recommended for a home connection with a changing public IP.
 
 ## 2. Start the services
 
