@@ -301,6 +301,21 @@ jobs:
           arch: aarch64
           vcpkg-triplet: arm64-osx
     steps:
+    - name: Checkout pinned RustDesk source
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        repository: rustdesk/rustdesk
+        ref: 828d1101afd2e656eb1c1d18511009bdf5336238
+        submodules: recursive
+        persist-credentials: false
+    - name: Checkout Unity build kit
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        path: ".unity-kit"
+        persist-credentials: false
+    - name: Apply Unity logo and server defaults
+      shell: bash
+      run: bash .unity-kit/rustdesk-custom-client/scripts/apply-branding.sh "$GITHUB_WORKSPACE"
     - name: Install build runtime
       run: |
         brew install llvm create-dmg
