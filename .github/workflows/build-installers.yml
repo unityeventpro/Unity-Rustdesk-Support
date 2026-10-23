@@ -196,6 +196,8 @@ jobs:
         cd flutter
         flutter pub get
         flutter pub run flutter_launcher_icons
+        # The portable wrapper also compiles res/icon.ico separately.
+        cp windows/runner/resources/app_icon.ico ../res/icon.ico
     - name: Build rustdesk
       run: |
         # Windows: build RustDesk
