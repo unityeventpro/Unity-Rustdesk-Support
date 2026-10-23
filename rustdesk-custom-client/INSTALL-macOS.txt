@@ -1,0 +1,29 @@
+Unity AV Support for macOS
+
+Choose AppleSilicon for an M-series Mac, or Intel for an Intel Mac. Open the
+matching signed/notarized .pkg and follow Installer. It installs RustDesk.app
+in /Applications. Open that app after installation.
+
+Fresh installations prefill all four settings:
+  ID Server: codehalter.does-it.net
+  Relay Server: codehalter.does-it.net:21117
+  API Server: https://support.unityavs.com
+  Key: Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=
+
+Permanent-password access uses the owner-approved support password. One-time
+password authentication is disabled by default. Obtain the permanent password
+directly from your authorized technician; it is not printed here. Existing
+locally saved passwords and network/security settings take priority.
+
+macOS requires Screen Recording and Accessibility/Control approval in System
+Settings > Privacy & Security before a technician can view/control your screen.
+A signed package does not grant or bypass those permissions. Reopen the app if
+macOS requests it after permissions change. Keep the Mac awake and the app or
+its background service running for remote access.
+
+The launcher uses the enlarged Unity logo with Unity AV Support beneath it.
+RustDesk app/bundle/service identity is retained for compatibility. Inventory
+and heartbeats register in the Unity dashboard without a client dashboard login.
+
+SHA256SUMS and the Mac build manifest identify the final release. A final release
+is only marked notarized after Apple's acceptance, stapling and Gatekeeper checks.

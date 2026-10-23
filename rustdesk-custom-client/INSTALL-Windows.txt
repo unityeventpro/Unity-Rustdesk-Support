@@ -1,0 +1,29 @@
+Unity AV Support for Windows x64
+
+Open UnityAVSupport-Windows-Install.exe, choose Install and approve the Windows
+administrator prompt. The default destination is C:\Program Files\RustDesk.
+Keep Desktop Icon selected to create the Unity AVS Support shortcut. Its icon
+contains the enlarged blue/red logo with Unity AV Support beneath it.
+
+All four Network settings have explicit built-in Windows defaults:
+  ID Server: codehalter.does-it.net
+  Relay Server: codehalter.does-it.net:21117
+  API Server: https://support.unityavs.com
+  Key: Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=
+Fresh clients register inventory and heartbeats in the Unity dashboard. Existing explicitly saved network settings take priority.
+Keep RustDesk running (or its installed service enabled) for online status.
+
+Fresh installations use the permanent support password approved by the owner.
+One-time-password authentication is disabled by default. Obtain the permanent
+password directly from your authorized technician; it is not printed here.
+Existing local permanent passwords and explicitly saved settings take priority.
+Automatic inventory does not assign an address book. No dashboard credentials
+are included. Distribute this unattended-access package only to authorized clients.
+
+This EXE is unsigned. Windows or company policy may warn or block it; contact
+your technician if blocked. The build checks compiled configuration, x64 EXE
+format and launcher resources. Confirm installation and automatic registration
+on a fresh Windows profile before broad deployment.
+
+SHA256SUMS and Windows-build-info.json identify this release. Corresponding
+modified RustDesk source and its license are distributed alongside the EXE.
