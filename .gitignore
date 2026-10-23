@@ -14,3 +14,12 @@ rustdesk-server/data/*
 Thumbs.db
 __pycache__/
 unity-dist/
+
+# Installer outputs and local signing material
+*.pkg
+*.p12
+*.p8
+*.key
+*.pem
+*.cer
+*.certSigningRequest

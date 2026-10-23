@@ -65,3 +65,29 @@ Check the displayed logo, confirm the server/key in client settings, connect to 
 Linux relay from outside its LAN, and test an authorized support session on each
 target OS. Confirm service startup and unattended access after a reboot. A successful
 CI build proves compilation and packaging; it does not establish these runtime checks.
+
+## Sign and notarize a Mac release
+
+Keep Developer ID Application and Developer ID Installer identities in the release
+Mac's Keychain. Store notarization credentials locally with `xcrun notarytool
+store-credentials`; never add credentials or private keys to the repository.
+
+Expand the unsigned candidate with `pkgutil --expand-full candidate.pkg expanded`,
+then sign its payload app using the release helper:
+
+```sh
+python3 rustdesk-custom-client/scripts/sign-macos.py \
+  expanded/Payload/Applications/RustDesk.app output/UnityAVSupport-macOS-AppleSilicon.pkg \
+  --identity "Developer ID Application: Your Name (TEAMID)" \
+  --installer-identity "Developer ID Installer: Your Name (TEAMID)" \
+  --notary-profile UnityRustDesk
+```
+
+Use the Intel filename for an Intel candidate. The helper copies the app, signs
+nested code inside-out with hardened runtime and the pinned upstream entitlements,
+builds and signs the PKG, submits it to Apple, staples the ticket, and validates
+Gatekeeper assessment. It only writes the final output after all checks pass.
+Recalculate release checksums after signing; candidate checksums no longer apply.
+Publish the final native installers, checksums, license and corresponding source
+archive together in a GitHub Release. Never label a candidate notarized merely
+because it was submitted or its ad-hoc signature verified.
