@@ -470,6 +470,14 @@ jobs:
         path: unity-dist/
         if-no-files-found: error
         retention-days: 14
+    - name: Preserve failed Mac verification candidate for diagnosis
+      if: failure()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: UnityAVSupport-macos-${{ matrix.job.arch }}-diagnostic
+        path: unity-dist/
+        if-no-files-found: ignore
+        retention-days: 3
     timeout-minutes: 180
     if: (github.event_name == 'push' && contains(github.event.head_commit.message, '[macos]')) || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'macos'))
   build-rustdesk-linux:

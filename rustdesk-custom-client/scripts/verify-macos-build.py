@@ -5,17 +5,28 @@ import json
 import runpy
 import struct
 import sys
+import subprocess
 from pathlib import Path
 
 arch = sys.argv[1]
 app = Path('flutter/build/macos/Build/Products/Release/RustDesk.app')
 lib = (app / 'Contents/Frameworks/liblibrustdesk.dylib').read_bytes()
 preset = runpy.run_path(str(Path(__file__).with_name('validate-preset-password.py')))['load_preset']()
-for value in ['codehalter.does-it.net', 'codehalter.does-it.net:21117',
-              'https://support.unityavs.com',
-              'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=',
-              'use-permanent-password', *preset.values()]:
-    assert value.encode() in lib, 'Compiled Mac client is missing required configuration'
+# Execute the actual factory map; optimized Intel code may split literal bytes.
+result = subprocess.run([str((app / 'Contents/MacOS/RustDesk').resolve()), '--unity-check-defaults'],
+                        capture_output=True, text=True, check=True, timeout=45)
+actual = json.loads(result.stdout)
+for name, expected in {
+    'id_server': 'codehalter.does-it.net',
+    'relay_server': 'codehalter.does-it.net:21117',
+    'api_server': 'https://support.unityavs.com',
+    'public_key': 'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=',
+    'verification_method': 'use-permanent-password',
+    'approve_mode': 'password',
+    'permanent_password_usable': True,
+    'preset_verifier_fingerprint': hashlib.sha256((preset['password'] + '\n' + preset['salt']).encode()).hexdigest(),
+}.items():
+    assert actual.get(name) == expected, f'Compiled Mac configuration check failed: {name}'
 for path in [app / 'Contents/MacOS/RustDesk', app / 'Contents/MacOS/service',
              app / 'Contents/Frameworks/liblibrustdesk.dylib']:
     b = path.read_bytes()

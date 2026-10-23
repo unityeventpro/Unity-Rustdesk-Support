@@ -19,6 +19,10 @@ def patch(root):
     root = Path(root)
     config = root / 'libs/hbb_common/src/config.rs'
     windows = root / 'src/platform/windows.rs'
+    core = root / 'src/core_main.rs'
+    core_marker = 'pub fn core_main() -> Option<CoreMainAction> {'
+    audit = Path(__file__).with_name('macos-config-audit.rs').read_text()
+    core_text = replace_once(core.read_text(), core_marker, core_marker + '\n' + audit, 'headless Mac defaults audit')
     config_text = replace_once(
         config.read_text(),
         '    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = Default::default();',
@@ -63,6 +67,7 @@ copy /Y \"{}\\{}.lnk\" \"%PUBLIC%\\Desktop\\Unity AVS Support.lnk\"",'''
     new = old + '\n' + r'    if exist \"%PUBLIC%\\Desktop\\Unity AVS Support.lnk\" del /f /q \"%PUBLIC%\\Desktop\\Unity AVS Support.lnk\"'
     text = replace_once(text, old, new, 'uninstall shortcut cleanup')
     # Validate every patch before writing either source file.
+    core.write_text(core_text)
     config.write_text(config_text)
     windows.write_text(text)
 
