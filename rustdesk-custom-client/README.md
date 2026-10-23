@@ -9,7 +9,7 @@ This kit applies Unity AV Support branding and your self-hosted server defaults 
 - Logo: the supplied image is used in the client logo slots and as the source image for desktop launcher icons
 - Unattended-access password: install scripts read `UNITY_SUPPORT_PASSWORD` from the local environment; no password is embedded in this repository
 
-The server and public key are compiled into the client. The unattended password is supplied locally at install time through `UNITY_SUPPORT_PASSWORD`; it is not stored in this repository. Use a unique password per endpoint and only manage devices you own or are authorized to support.
+The server and public key are compiled into the client. An unattended password is optional and can be supplied locally through `UNITY_SUPPORT_PASSWORD`; it is not stored in this repository. Use a unique password per endpoint and only manage devices you own or are authorized to support.
 
 ## Prepare the source
 
@@ -33,7 +33,7 @@ These compiled defaults apply to fresh installs. Existing RustDesk client settin
 
 ## Build requirements and commands
 
-Use the repository's [GitHub Actions build workflow](BUILDING.md) to build downloadable test installers on native Windows, macOS, and Linux runners. It generates Windows x64 EXE, Intel and Apple Silicon macOS DMG, and Debian/Ubuntu amd64 DEB bundles, plus a corresponding source archive. Initial packages are unsigned and require platform testing before distribution.
+Use the repository's [GitHub Actions build workflow](BUILDING.md) to build downloadable test installers on native Windows, macOS, and Linux runners. It generates Windows x64 EXE, Intel and Apple Silicon macOS PKG, and Debian/Ubuntu amd64 DEB bundles, plus a corresponding source archive. Initial packages are unsigned and require platform testing before distribution.
 
 For local builds, RustDesk's desktop Flutter client requires platform-specific toolchains: Windows/MSVC for Windows, macOS/Xcode for macOS, and the Linux build dependencies for Linux. This kit does not assume the current computer has those toolchains installed.
 
@@ -44,15 +44,32 @@ From the customized source tree, follow the official platform build guide and ru
 - [macOS build guide](https://rustdesk.com/docs/en/dev/build/osx/)
 - [General build guide](https://rustdesk.com/docs/en/dev/build/)
 
-After building, rename the generated packages to `UnityAVSupport-RustDesk.deb`, `UnityAVSupport-RustDesk-Setup.exe`, or `UnityAVSupport-RustDesk.dmg`, then place each package beside its matching install script.
+## Client installation
 
-## One-click installation
+Clients should download individual native installers from a published GitHub Release.
+Actions artifacts are temporary build outputs and require additional download steps.
 
-- Windows: put `install-windows.ps1` beside the `.exe`, then run it as administrator.
-- macOS: put `install-macos.command` beside the `.dmg`; it prompts for administrator authorization to copy RustDesk into `/Applications`.
-- Debian/Ubuntu: put `install-linux.sh` beside the `.deb` and run it from a terminal; it invokes `sudo` to install the package.
+| Download | Install behavior |
+|---|---|
+| `UnityAVSupport-Windows-Install.exe` | Opens RustDesk's native installation screen; default destination is Program Files/RustDesk |
+| `UnityAVSupport-macOS-AppleSilicon.pkg` | macOS Installer places RustDesk.app in /Applications on Apple Silicon Macs |
+| `UnityAVSupport-macOS-Intel.pkg` | macOS Installer places RustDesk.app in /Applications on Intel Macs |
+| `UnityAVSupport-Linux-amd64.deb` | Debian/Ubuntu amd64 package manager installs the app, launcher, and package files |
 
-Before running an install script, set `UNITY_SUPPORT_PASSWORD` in the local shell or PowerShell session. Do not put it in source control or a shared installer. Use a unique per-device password. macOS installers need Developer ID code signing and notarization for a low-friction Gatekeeper experience. Unsigned Windows installers can receive SmartScreen warnings.
+A download link downloads a file; the client opens it and approves the normal OS
+installation prompts. Browser downloads do not install software without consent.
+After installation, open RustDesk and share the displayed ID and one-time password
+with the authorized support technician. Mac users must approve screen recording
+and control permissions. No password entry in a shell is required for normal use.
+
+The optional administrator helpers are for managed installs. They configure an
+unattended password only when `UNITY_SUPPORT_PASSWORD` is explicitly supplied
+locally. Do not put passwords in source control or shared installers.
+
+Mac client releases require Developer ID Application and Developer ID Installer
+signing plus Apple notarization. Windows builds without Authenticode signing may
+show SmartScreen warnings. Keep unsigned candidates clearly identified until the
+release signing checks are complete.
 
 ## Maintenance
 
