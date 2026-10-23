@@ -1,8 +1,7 @@
 $ErrorActionPreference = 'Stop'
-if (-not $env:UNITY_SUPPORT_PASSWORD) { throw 'Set UNITY_SUPPORT_PASSWORD in this PowerShell session before installing.' }
-$Installer = Join-Path $PSScriptRoot 'UnityAVSupport-RustDesk-Setup.exe'
+$Installer = Join-Path $PSScriptRoot 'UnityAVSupport-Windows-Install.exe'
 if (-not (Test-Path $Installer)) {
-    throw "Place the branded RustDesk installer beside this script as UnityAVSupport-RustDesk-Setup.exe"
+    throw "Place the branded RustDesk installer beside this script as UnityAVSupport-Windows-Install.exe"
 }
 
 $IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -18,6 +17,8 @@ $Candidates = @(
 )
 $Client = $Candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $Client) { throw 'Installation finished, but the RustDesk executable was not found in Program Files.' }
-& $Client --password $env:UNITY_SUPPORT_PASSWORD
-if ($LASTEXITCODE -ne 0) { throw "RustDesk password configuration failed with exit code $LASTEXITCODE." }
-Write-Host 'Unity AV Support RustDesk is installed and unattended access is configured.'
+if ($env:UNITY_SUPPORT_PASSWORD) {
+    & $Client --password $env:UNITY_SUPPORT_PASSWORD
+    if ($LASTEXITCODE -ne 0) { throw "RustDesk password configuration failed with exit code $LASTEXITCODE." }
+}
+Write-Host 'Unity AV Support RustDesk is installed in Program Files.' 

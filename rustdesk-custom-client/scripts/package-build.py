@@ -10,9 +10,10 @@ from pathlib import Path
 def package(platform, arch, source_ref, root=Path('.'), kit=None):
     kit = kit or Path(__file__).resolve().parents[1]
     patterns = {
-        'windows': ('SignOutput/rustdesk-*-' + arch + '.exe', 'UnityAVSupport-RustDesk-Setup.exe', 'install-windows.ps1'),
-        'macos': ('rustdesk-*-' + arch + '.dmg', 'UnityAVSupport-RustDesk.dmg', 'install-macos.command'),
-        'linux': ('rustdesk-*-' + arch + '.deb', 'UnityAVSupport-RustDesk.deb', 'install-linux.sh'),
+        # Upstream's wrapper opens the installation UI only for names ending in install.exe.
+        'windows': ('SignOutput/rustdesk-*-' + arch + '.exe', 'UnityAVSupport-Windows-Install.exe', 'install-windows.ps1'),
+        'macos': ('rustdesk-*-' + arch + '.pkg', 'UnityAVSupport-macOS-' + ('AppleSilicon' if arch == 'aarch64' else 'Intel') + '.pkg', 'install-macos.command'),
+        'linux': ('rustdesk-*-' + arch + '.deb', 'UnityAVSupport-Linux-amd64.deb', 'install-linux.sh'),
     }
     pattern, name, helper = patterns[platform]
     candidates = sorted(root.glob(pattern))
@@ -31,6 +32,8 @@ def package(platform, arch, source_ref, root=Path('.'), kit=None):
     manifest = {
         'product': 'Unity AV Support RustDesk', 'platform': platform, 'architecture': arch,
         'rustdesk_source_commit': source_ref, 'signed': False,
+        'installer_file': name,
+        'installation_directory': {'windows': '%ProgramFiles%/RustDesk', 'macos': '/Applications/RustDesk.app', 'linux': '/usr/share/rustdesk'}[platform],
         'server': 'codehalter.does-it.net',
         'source_artifact': 'UnityAVSupport-RustDesk-source (download from the same workflow run)',
     }

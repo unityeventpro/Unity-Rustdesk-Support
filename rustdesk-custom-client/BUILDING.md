@@ -9,9 +9,9 @@ Manual workflow dispatch becomes available after the workflow reaches the defaul
 
 | Artifact | Target | Contents |
 |---|---|---|
-| `UnityAVSupport-windows-x86_64-unsigned` | Windows x64 | Self-extracting EXE and PowerShell install helper |
-| `UnityAVSupport-macos-x86_64-unsigned` | Intel Mac | DMG and command install helper |
-| `UnityAVSupport-macos-aarch64-unsigned` | Apple Silicon Mac | DMG and command install helper |
+| `UnityAVSupport-windows-x86_64-unsigned` | Windows x64 | EXE opening the native installer and optional administrator helper |
+| `UnityAVSupport-macos-x86_64-unsigned` | Intel Mac | PKG installing into /Applications and optional command helper |
+| `UnityAVSupport-macos-aarch64-unsigned` | Apple Silicon Mac | PKG installing into /Applications and optional command helper |
 | `UnityAVSupport-linux-x86_64-unsigned` | Debian/Ubuntu amd64 | DEB and shell install helper |
 | `UnityAVSupport-RustDesk-source` | All targets | Corresponding modified RustDesk source, submodules and Unity build kit |
 
@@ -37,23 +37,25 @@ The server's private key and unattended-access passwords are never build inputs.
 
 ## Install a test build
 
-Download and extract the artifact for the endpoint's architecture. Keep the package
-beside its matching helper. `SHA256SUMS` covers the package and supporting files;
-`build-info.json` records the target and pinned RustDesk source commit.
-Keep the corresponding source artifact if you distribute the binary under the AGPL.
+Download and extract the artifact for the endpoint's architecture. Double-click
+`UnityAVSupport-Windows-Install.exe` on Windows and approve installation into
+Program Files. Open the Apple Silicon or Intel `.pkg` on macOS and follow Installer;
+it installs `/Applications/RustDesk.app`. Open the `.deb` in the Debian/Ubuntu
+software installer, or run `sudo apt install ./UnityAVSupport-Linux-amd64.deb`.
 
-- **Windows:** Open PowerShell as Administrator. Set `$env:UNITY_SUPPORT_PASSWORD`
-  locally to a unique endpoint password, then run `./install-windows.ps1`.
-- **macOS:** In Terminal, set and export `UNITY_SUPPORT_PASSWORD` locally, then run
-  `bash ./install-macos.command`. Approve administrator authorization and macOS
-  Screen Recording/Accessibility permissions as needed for remote support.
-- **Debian/Ubuntu:** In a terminal, set and export `UNITY_SUPPORT_PASSWORD` locally,
-  then run `bash ./install-linux.sh`.
+Clients do not need the helper scripts or a preconfigured password. The optional
+administrator helpers accept `UNITY_SUPPORT_PASSWORD` only when you explicitly
+supply a unique per-device unattended password locally. macOS screen recording
+and control permissions still require user approval.
+
+`SHA256SUMS` covers the package and supporting files; `build-info.json` records
+the target and pinned source. Publish the corresponding source archive beside
+any binary release. Never publish signing keys, passwords, or server private keys.
 
 These initial builds are **unsigned and not notarized**. Windows and macOS may
 block or warn about downloaded packages. Test only on authorized devices. Developer
 ID signing/notarization and Windows Authenticode signing need your own certificates
-and are a separate production-release step. The helper scripts configure a locally
+and are a separate production-release step. The helper scripts can optionally configure a locally
 supplied unattended password; they do not bypass OS consent or permissions.
 Existing client network settings may override compiled defaults.
 

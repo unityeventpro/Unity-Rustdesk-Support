@@ -14,8 +14,8 @@ class PackageTests(unittest.TestCase):
     def test_native_outputs_and_checksums(self):
         for platform, arch, binary in [
             ('windows', 'x86_64', 'SignOutput/rustdesk-1.5.1-x86_64.exe'),
-            ('macos', 'aarch64', 'rustdesk-1.5.1-aarch64.dmg'),
-            ('macos', 'x86_64', 'rustdesk-1.5.1-x86_64.dmg'),
+            ('macos', 'aarch64', 'rustdesk-1.5.1-aarch64.pkg'),
+            ('macos', 'x86_64', 'rustdesk-1.5.1-x86_64.pkg'),
             ('linux', 'x86_64', 'rustdesk-1.5.1-x86_64.deb'),
         ]:
             with self.subTest(platform=platform, arch=arch), tempfile.TemporaryDirectory() as temp:
@@ -25,6 +25,8 @@ class PackageTests(unittest.TestCase):
                 source.write_bytes(b'test native build output')
                 (root / 'LICENCE').write_text('AGPL fixture')
                 out = module.package(platform, arch, 'pinned-commit', root, KIT)
+                if platform == 'windows':
+                    self.assertTrue((out / 'UnityAVSupport-Windows-Install.exe').is_file())
                 checks = (out / 'SHA256SUMS').read_text().splitlines()
                 self.assertEqual(len(checks), 5)
                 for check in checks:

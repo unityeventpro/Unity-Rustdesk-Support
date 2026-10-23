@@ -422,6 +422,12 @@ jobs:
         codesign --force --sign - "$APP/Contents/MacOS/service"
         codesign --force --sign - "$APP"
         codesign --verify --deep --strict --verbose=2 "$APP"
+    - name: Create macOS installer package
+      shell: bash
+      run: |
+        bash .unity-kit/rustdesk-custom-client/scripts/package-macos.sh \
+          ./flutter/build/macos/Build/Products/Release/RustDesk.app "$VERSION" \
+          "rustdesk-${VERSION}-${{ matrix.job.arch }}.pkg"
     - name: create unsigned dmg
       if: env.UPLOAD_ARTIFACT == 'true'
       run: |

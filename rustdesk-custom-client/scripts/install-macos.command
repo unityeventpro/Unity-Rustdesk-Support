@@ -1,16 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
-
-DMG="$(dirname "$0")/UnityAVSupport-RustDesk.dmg"
-APP_NAME="RustDesk"
-MOUNT="$(mktemp -d /tmp/unity-rustdesk.XXXXXX)"
-cleanup() { hdiutil detach "$MOUNT" -quiet >/dev/null 2>&1 || true; rmdir "$MOUNT" 2>/dev/null || true; }
-trap cleanup EXIT
-
-[[ -n "${UNITY_SUPPORT_PASSWORD:-}" ]] || { echo "Set UNITY_SUPPORT_PASSWORD in this shell before installing." >&2; exit 1; }
-[[ -f "$DMG" ]] || { echo "Place UnityAVSupport-RustDesk.dmg beside this script." >&2; exit 1; }
-hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT" -quiet
-[[ -d "$MOUNT/$APP_NAME.app" ]] || { echo "Expected $APP_NAME.app inside the disk image." >&2; exit 1; }
-sudo ditto "$MOUNT/$APP_NAME.app" "/Applications/$APP_NAME.app"
-sudo "/Applications/$APP_NAME.app/Contents/MacOS/$APP_NAME" --password "$UNITY_SUPPORT_PASSWORD"
-echo 'Unity AV Support RustDesk is installed and unattended access is configured.'
+DIR="$(cd "$(dirname "$0")" && pwd)"
+shopt -s nullglob
+PACKAGES=("$DIR"/UnityAVSupport-macOS-*.pkg)
+[[ ${#PACKAGES[@]} -eq 1 ]] || { echo 'Keep exactly one matching Mac package beside this helper.' >&2; exit 1; }
+sudo /usr/sbin/installer -pkg "${PACKAGES[0]}" -target /
+if [[ -n "${UNITY_SUPPORT_PASSWORD:-}" ]]; then
+  sudo /Applications/RustDesk.app/Contents/MacOS/RustDesk --password "$UNITY_SUPPORT_PASSWORD"
+fi
+echo 'Unity AV Support RustDesk is installed in /Applications.'
