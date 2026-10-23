@@ -61,7 +61,7 @@ install -m 0644 "$LOGO" "$ASSETS/logo.png"
 install -m 0644 "$LOGO" "$ASSETS/logo_light.png"
 install -m 0644 "$LOGO" "$ASSETS/logo_dark.png"
 install -m 0644 "$LAUNCHER_ICON" "$SOURCE_DIR/res/icon.png"
-install -m 0644 "$LOGO" "$SOURCE_DIR/res/mac-icon.png"
+install -m 0644 "$LAUNCHER_ICON" "$SOURCE_DIR/res/mac-icon.png"
 
 echo "Applied Unity AV Support assets and self-hosted server defaults to: $SOURCE_DIR"
 echo "Before building, run 'flutter pub get' and 'flutter pub run flutter_launcher_icons' from the flutter directory."

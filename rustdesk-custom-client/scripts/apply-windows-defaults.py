@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch the pinned client while retaining RustDesk's install/service identity."""
+"""Patch desktop server defaults while retaining RustDesk install/service identity."""
 from pathlib import Path
 import sys
 
@@ -24,7 +24,7 @@ def patch(root):
         '    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = Default::default();',
         '''    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = {
         let mut settings = HashMap::new();
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "macos"))]
         {
             settings.insert("custom-rendezvous-server".to_owned(), "codehalter.does-it.net".to_owned());
             settings.insert("relay-server".to_owned(), "codehalter.does-it.net:21117".to_owned());
@@ -43,12 +43,12 @@ def patch(root):
         config_text,
         '    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();',
         '''    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = {
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "macos"))]
         let settings = option_env!("UNITY_PRESET_PASSWORD_CONFIG")
             .map(|value| serde_json::from_str::<HashMap<String, String>>(value)
                 .expect("Invalid unattended access build configuration"))
             .unwrap_or_default();
-        #[cfg(not(windows))]
+        #[cfg(not(any(windows, target_os = "macos")))]
         let settings = HashMap::new();
         RwLock::new(settings)
     };''',

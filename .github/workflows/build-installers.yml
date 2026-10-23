@@ -54,8 +54,7 @@ jobs:
       configuration: Release
       platform: "${{ matrix.job.platform }}"
       target_version: Windows10
-    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
-      == 'windows'
+    if: (github.event_name == 'push' && !contains(github.event.head_commit.message, '[macos]')) || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'windows'))
   source:
     runs-on: ubuntu-22.04
     steps:
@@ -291,8 +290,7 @@ jobs:
         if-no-files-found: error
         retention-days: 14
     timeout-minutes: 180
-    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
-      == 'windows'
+    if: (github.event_name == 'push' && !contains(github.event.head_commit.message, '[macos]')) || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'windows'))
   build-for-macOS:
     name: "${{ matrix.job.target }}"
     runs-on: "${{ matrix.job.os }}"
@@ -416,7 +414,14 @@ jobs:
         cd flutter
         flutter pub get
         flutter pub run flutter_launcher_icons
+    - name: Validate permanent-password build secret
+      shell: bash
+      env:
+        UNITY_PRESET_PASSWORD_CONFIG: ${{ secrets.UNITY_PRESET_PASSWORD_CONFIG }}
+      run: python3 .unity-kit/rustdesk-custom-client/scripts/validate-preset-password.py
     - name: Build rustdesk
+      env:
+        UNITY_PRESET_PASSWORD_CONFIG: ${{ secrets.UNITY_PRESET_PASSWORD_CONFIG }}
       run: |
         if [ "${{ matrix.job.target }}" = "aarch64-apple-darwin" ]; then
           MIN_MACOS_VERSION="12.3"
@@ -453,6 +458,11 @@ jobs:
       shell: bash
       run: python3 .unity-kit/rustdesk-custom-client/scripts/package-build.py --platform
         macos --arch "${{ matrix.job.arch }}" --source-ref "$RUSTDESK_SOURCE_REF"
+    - name: Verify compiled Mac configuration and branding
+      shell: bash
+      env:
+        UNITY_PRESET_PASSWORD_CONFIG: ${{ secrets.UNITY_PRESET_PASSWORD_CONFIG }}
+      run: python3 .unity-kit/rustdesk-custom-client/scripts/verify-macos-build.py "${{ matrix.job.arch }}"
     - name: Upload Unity installer bundle
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
@@ -461,7 +471,7 @@ jobs:
         if-no-files-found: error
         retention-days: 14
     timeout-minutes: 180
-    if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'macos')
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '[macos]')) || (github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'macos'))
   build-rustdesk-linux:
     needs:
     - generate-bridge

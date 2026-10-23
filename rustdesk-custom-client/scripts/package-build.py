@@ -37,14 +37,15 @@ def package(platform, arch, source_ref, root=Path('.'), kit=None):
         'server': 'codehalter.does-it.net',
         'source_artifact': 'UnityAVSupport-RustDesk-source (download from the same workflow run)',
     }
-    if platform == 'windows':
+    if platform in ('windows', 'macos'):
         manifest['id_server'] = 'codehalter.does-it.net'
         manifest['relay_server'] = 'codehalter.does-it.net:21117'
         manifest['public_key'] = 'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM='
         manifest['api_server'] = 'https://support.unityavs.com'
         manifest['authentication'] = 'permanent-password-only'
         manifest['preset_permanent_password'] = True
-        manifest['desktop_shortcut_label'] = 'Unity AVS Support'
+        if platform == 'windows':
+            manifest['desktop_shortcut_label'] = 'Unity AVS Support'
     (output / 'build-info.json').write_text(json.dumps(manifest, indent=2) + '\n')
     hashes = []
     for path in sorted(output.iterdir()):
