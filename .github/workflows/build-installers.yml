@@ -269,6 +269,9 @@ jobs:
       shell: bash
       run: python3 .unity-kit/rustdesk-custom-client/scripts/package-build.py --platform
         windows --arch "${{ matrix.job.arch }}" --source-ref "$RUSTDESK_SOURCE_REF"
+    - name: Verify compiled Windows defaults and icon resources
+      shell: bash
+      run: python3 .unity-kit/rustdesk-custom-client/scripts/verify-windows-build.py
     - name: Upload Unity installer bundle
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
@@ -740,3 +743,73 @@ jobs:
         retention-days: 14
     timeout-minutes: 180
     if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'linux')
+  publish-windows:
+    name: Publish verified Windows installer
+    needs: [source, build-for-windows-flutter]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout Unity build kit
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      with:
+        persist-credentials: false
+    - name: Download Windows bundle
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: UnityAVSupport-windows-x86_64-unsigned
+        path: release/windows
+    - name: Download corresponding source
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        name: UnityAVSupport-RustDesk-source
+        path: release/source
+    - name: Verify checksums and stage release assets
+      shell: bash
+      run: |
+        cd release/windows
+        sha256sum -c SHA256SUMS
+        cd ../..
+        mkdir release/assets
+        cp release/windows/UnityAVSupport-Windows-Install.exe release/assets/
+        cp release/windows/build-info.json release/assets/Windows-build-info.json
+        cp release/windows/RUSTDESK-LICENCE.txt release/assets/
+        cp release/source/UnityAVSupport-RustDesk-source.tar.gz release/assets/
+        cp rustdesk-custom-client/INSTALL-Windows.txt release/assets/
+        python3 - <<'PY'
+        import json, os
+        from pathlib import Path
+        p = Path('release/assets/Windows-build-info.json')
+        d = json.loads(p.read_text())
+        d['build_kit_commit'] = os.environ['GITHUB_SHA']
+        d['build_run'] = os.environ['GITHUB_SERVER_URL'] + '/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID']
+        d['compiled_configuration_and_icon_checks'] = 'passed'
+        d['fresh_windows_installation_test'] = 'pending user verification'
+        p.write_text(json.dumps(d, indent=2) + '\n')
+        PY
+        cd release/assets
+        sha256sum -- * > SHA256SUMS
+    - name: Publish public download links
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: |
+        TAG="unity-v${VERSION}-windows-${GITHUB_RUN_NUMBER}"
+        cat > release/notes.md <<'NOTES'
+        Windows x64 installer with automatic dashboard API configuration and updated Unity branding.
+
+        Download **UnityAVSupport-Windows-Install.exe**, open it and choose Install. The desktop shortcut is **Unity AVS Support**, with the enlarged logo and **Unity AV Support** beneath it.
+
+        Fresh clients default API Server to **https://support.unityavs.com** for device inventory and heartbeats. Existing explicit API settings take priority. This does not grant unattended access or automatically assign address books; no credentials or shared passwords are embedded.
+
+        Validation: compiled API URL and shortcut label, x64 EXEs, matching generated launcher resources, and package checksums passed. A fresh Windows installation/enrollment test is still required before broad rollout. Windows remains unsigned; contact your technician if blocked by Windows or company policy.
+
+        Corresponding modified RustDesk source, license, installation instructions, build provenance and SHA256SUMS accompany the installer. Mac and Linux builds are separate.
+        NOTES
+        if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          gh release upload "$TAG" release/assets/* --repo "$GITHUB_REPOSITORY" --clobber
+        else
+          gh release create "$TAG" release/assets/* --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Unity AV Support ${VERSION} — Windows update ${GITHUB_RUN_NUMBER}" \
+            --notes-file release/notes.md --latest
+        fi

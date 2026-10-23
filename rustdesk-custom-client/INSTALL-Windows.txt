@@ -1,0 +1,23 @@
+Unity AV Support for Windows x64
+
+Open UnityAVSupport-Windows-Install.exe, choose Install and approve the Windows
+administrator prompt. The default destination is C:\Program Files\RustDesk.
+Keep Desktop Icon selected to create the Unity AVS Support shortcut. Its icon
+contains the enlarged blue/red logo with Unity AV Support beneath it.
+
+The ID/relay server and public key are built in. API Server defaults to
+https://support.unityavs.com, so fresh clients register inventory and heartbeats
+in the Unity dashboard. Existing explicitly saved network settings take priority.
+Keep RustDesk running (or its installed service enabled) for online status.
+
+Automatic inventory does not grant unattended access or assign an address book.
+Give your authorized technician the displayed ID and current one-time password.
+No shared unattended password or dashboard credentials are included.
+
+This EXE is unsigned. Windows or company policy may warn or block it; contact
+your technician if blocked. The build checks compiled configuration, x64 EXE
+format and launcher resources. Confirm installation and automatic registration
+on a fresh Windows profile before broad deployment.
+
+SHA256SUMS and Windows-build-info.json identify this release. Corresponding
+modified RustDesk source and its license are distributed alongside the EXE.
