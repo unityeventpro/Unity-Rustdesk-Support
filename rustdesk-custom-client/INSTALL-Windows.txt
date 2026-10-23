@@ -13,9 +13,12 @@ All four Network settings have explicit built-in Windows defaults:
 Fresh clients register inventory and heartbeats in the Unity dashboard. Existing explicitly saved network settings take priority.
 Keep RustDesk running (or its installed service enabled) for online status.
 
-Automatic inventory does not grant unattended access or assign an address book.
-Give your authorized technician the displayed ID and current one-time password.
-No shared unattended password or dashboard credentials are included.
+Fresh installations use the permanent support password approved by the owner.
+One-time-password authentication is disabled by default. Obtain the permanent
+password directly from your authorized technician; it is not printed here.
+Existing local permanent passwords and explicitly saved settings take priority.
+Automatic inventory does not assign an address book. No dashboard credentials
+are included. Distribute this unattended-access package only to authorized clients.
 
 This EXE is unsigned. Windows or company policy may warn or block it; contact
 your technician if blocked. The build checks compiled configuration, x64 EXE

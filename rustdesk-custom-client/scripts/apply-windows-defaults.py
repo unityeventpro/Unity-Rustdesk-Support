@@ -30,10 +30,29 @@ def patch(root):
             settings.insert("relay-server".to_owned(), "codehalter.does-it.net:21117".to_owned());
             settings.insert("api-server".to_owned(), "https://support.unityavs.com".to_owned());
             settings.insert("key".to_owned(), "Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=".to_owned());
+            if option_env!("UNITY_PRESET_PASSWORD_CONFIG").is_some() {
+                settings.insert("verification-method".to_owned(), "use-permanent-password".to_owned());
+                settings.insert("approve-mode".to_owned(), "password".to_owned());
+            }
         }
         RwLock::new(settings)
     };''',
         'default server settings',
+    )
+    config_text = replace_once(
+        config_text,
+        '    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();',
+        '''    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = {
+        #[cfg(windows)]
+        let settings = option_env!("UNITY_PRESET_PASSWORD_CONFIG")
+            .map(|value| serde_json::from_str::<HashMap<String, String>>(value)
+                .expect("Invalid unattended access build configuration"))
+            .unwrap_or_default();
+        #[cfg(not(windows))]
+        let settings = HashMap::new();
+        RwLock::new(settings)
+    };''',
+        'build-time permanent password verifier',
     )
     text = windows.read_text()
     old = r'"copy /Y \"{}\\{}.lnk\" \"%PUBLIC%\\Desktop\\\"",'

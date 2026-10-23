@@ -42,6 +42,8 @@ def package(platform, arch, source_ref, root=Path('.'), kit=None):
         manifest['relay_server'] = 'codehalter.does-it.net:21117'
         manifest['public_key'] = 'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM='
         manifest['api_server'] = 'https://support.unityavs.com'
+        manifest['authentication'] = 'permanent-password-only'
+        manifest['preset_permanent_password'] = True
         manifest['desktop_shortcut_label'] = 'Unity AVS Support'
     (output / 'build-info.json').write_text(json.dumps(manifest, indent=2) + '\n')
     hashes = []
