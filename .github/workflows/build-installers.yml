@@ -447,8 +447,7 @@ jobs:
         if-no-files-found: error
         retention-days: 14
     timeout-minutes: 180
-    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
-      == 'macos'
+    if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'macos')
   build-rustdesk-linux:
     needs:
     - generate-bridge
@@ -740,5 +739,4 @@ jobs:
         if-no-files-found: error
         retention-days: 14
     timeout-minutes: 180
-    if: github.event_name == 'push' || inputs.platform == 'all' || inputs.platform
-      == 'linux'
+    if: github.event_name == 'workflow_dispatch' && (inputs.platform == 'all' || inputs.platform == 'linux')

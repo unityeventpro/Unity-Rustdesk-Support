@@ -1,0 +1,3 @@
+Built-in image_gen edit using the enlarged monogram and original company artwork.
+
+Use case: precise-object-edit. Preserve the blue/red interlocking monogram and charcoal background. Keep the text exactly Unity AV Support in bold white sans serif on one line centered UNDER the monogram. Tight square launcher framing: monogram roughly 86% of canvas width, text about 92% width below. Small safe margins, no clipping, no logo redesign, no border or additional graphics.

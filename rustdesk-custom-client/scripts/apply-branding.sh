@@ -9,12 +9,16 @@ fi
 SOURCE_DIR="$(cd "$1" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGO="$SCRIPT_DIR/../brand/unity-av-support-logo.png"
+LAUNCHER_ICON="$SCRIPT_DIR/../brand/unity-avs-launcher-icon.png"
 CONFIG="$SOURCE_DIR/libs/hbb_common/src/config.rs"
 GITIGNORE="$SOURCE_DIR/.gitignore"
 
 [[ -f "$LOGO" ]] || { echo "Missing logo: $LOGO" >&2; exit 1; }
+[[ -f "$LAUNCHER_ICON" ]] || { echo "Missing launcher icon: $LAUNCHER_ICON" >&2; exit 1; }
 [[ -f "$CONFIG" ]] || { echo "Not a RustDesk source tree: $SOURCE_DIR" >&2; exit 1; }
 [[ -f "$GITIGNORE" ]] || { echo "Missing RustDesk .gitignore: $GITIGNORE" >&2; exit 1; }
+
+python3 "$SCRIPT_DIR/apply-windows-defaults.py" "$SOURCE_DIR"
 
 python3 - "$CONFIG" <<'PY'
 from pathlib import Path
@@ -52,11 +56,11 @@ PY
 
 ASSETS="$SOURCE_DIR/flutter/assets"
 mkdir -p "$ASSETS"
-install -m 0644 "$LOGO" "$ASSETS/icon.png"
+install -m 0644 "$LAUNCHER_ICON" "$ASSETS/icon.png"
 install -m 0644 "$LOGO" "$ASSETS/logo.png"
 install -m 0644 "$LOGO" "$ASSETS/logo_light.png"
 install -m 0644 "$LOGO" "$ASSETS/logo_dark.png"
-install -m 0644 "$LOGO" "$SOURCE_DIR/res/icon.png"
+install -m 0644 "$LAUNCHER_ICON" "$SOURCE_DIR/res/icon.png"
 install -m 0644 "$LOGO" "$SOURCE_DIR/res/mac-icon.png"
 
 echo "Applied Unity AV Support assets and self-hosted server defaults to: $SOURCE_DIR"

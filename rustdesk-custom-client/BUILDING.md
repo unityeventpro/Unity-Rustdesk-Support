@@ -91,3 +91,20 @@ Recalculate release checksums after signing; candidate checksums no longer apply
 Publish the final native installers, checksums, license and corresponding source
 archive together in a GitHub Release. Never label a candidate notarized merely
 because it was submitted or its ad-hoc signature verified.
+
+## Windows dashboard enrollment and shortcut
+
+Windows builds default API Server to `https://support.unityavs.com`. A fresh
+client sends device inventory/heartbeats to the dashboard without manually
+entering this URL. Existing explicit API configuration remains authoritative.
+This registers inventory; it does not grant unattended access or automatically
+assign a technician address book. No account credentials are embedded.
+
+The desktop shortcut is `Unity AVS Support`; installation, executable and service
+identities remain RustDesk for compatibility. Installing with Desktop Icon
+selected replaces the old public RustDesk shortcut. Uninstall removes either
+shortcut name. The launcher uses an enlarged blue/red monogram with Unity AV Support beneath
+it, while the full original artwork remains available for in-app branding.
+
+Pushes build Windows and corresponding source; manual dispatch can still select
+Windows, macOS, Linux, or all platforms.
