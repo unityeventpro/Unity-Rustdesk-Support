@@ -7,7 +7,18 @@ from pathlib import Path
 
 root = Path('.')
 dll = (root / 'rustdesk/librustdesk.dll').read_bytes()
-for expected in (b'https://support.unityavs.com', b'Unity AVS Support.lnk'):
+config_source = (root / 'libs/hbb_common/src/config.rs').read_text()
+for key, value in {
+    'custom-rendezvous-server': 'codehalter.does-it.net',
+    'relay-server': 'codehalter.does-it.net:21117',
+    'api-server': 'https://support.unityavs.com',
+    'key': 'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=',
+}.items():
+    assert f'settings.insert("{key}".to_owned(), "{value}".to_owned());' in config_source
+
+for expected in (b'codehalter.does-it.net', b'codehalter.does-it.net:21117',
+                 b'https://support.unityavs.com', b'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=',
+                 b'Unity AVS Support.lnk'):
     if expected not in dll:
         raise SystemExit(f'Compiled client is missing {expected!r}')
 ico = (root / 'flutter/windows/runner/resources/app_icon.ico').read_bytes()
@@ -19,6 +30,9 @@ for i in range(count):
     images.append(ico[offset:offset + size])
 largest = max(images, key=len)
 manifest = json.loads((root / 'unity-dist/build-info.json').read_text())
+assert manifest['id_server'] == 'codehalter.does-it.net'
+assert manifest['relay_server'] == 'codehalter.does-it.net:21117'
+assert manifest['public_key'] == 'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM='
 assert manifest['api_server'] == 'https://support.unityavs.com'
 assert manifest['desktop_shortcut_label'] == 'Unity AVS Support'
 for path in (root / 'rustdesk/rustdesk.exe', root / 'unity-dist' / manifest['installer_file']):
@@ -28,4 +42,4 @@ for path in (root / 'rustdesk/rustdesk.exe', root / 'unity-dist' / manifest['ins
     assert struct.unpack_from('<H', binary, pe + 4)[0] == 0x8664
     assert largest in binary, f'Generated launcher icon is missing from {path}'
     print(path, hashlib.sha256(binary).hexdigest())
-print('Verified compiled API URL, desktop label, x64 EXEs and matching launcher icon resources.')
+print('Verified compiled ID/relay/API servers, public key, desktop label, x64 EXEs and matching launcher icon resources.')

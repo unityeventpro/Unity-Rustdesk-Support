@@ -25,10 +25,15 @@ def patch(root):
         '''    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = {
         let mut settings = HashMap::new();
         #[cfg(windows)]
-        settings.insert("api-server".to_owned(), "https://support.unityavs.com".to_owned());
+        {
+            settings.insert("custom-rendezvous-server".to_owned(), "codehalter.does-it.net".to_owned());
+            settings.insert("relay-server".to_owned(), "codehalter.does-it.net:21117".to_owned());
+            settings.insert("api-server".to_owned(), "https://support.unityavs.com".to_owned());
+            settings.insert("key".to_owned(), "Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=".to_owned());
+        }
         RwLock::new(settings)
     };''',
-        'default API settings',
+        'default server settings',
     )
     text = windows.read_text()
     old = r'"copy /Y \"{}\\{}.lnk\" \"%PUBLIC%\\Desktop\\\"",'

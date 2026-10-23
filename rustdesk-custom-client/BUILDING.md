@@ -108,3 +108,5 @@ it, while the full original artwork remains available for in-app branding.
 
 Pushes build Windows and corresponding source; manual dispatch can still select
 Windows, macOS, Linux, or all platforms.
+
+Windows explicitly prefills all four Network fields through DEFAULT_SETTINGS: custom-rendezvous-server, relay-server, api-server and key. The relay is codehalter.does-it.net:21117. The ID hostname and public key fallback constants remain aligned. Explicit saved user settings still take priority; these defaults target fresh installations.

@@ -38,6 +38,9 @@ def package(platform, arch, source_ref, root=Path('.'), kit=None):
         'source_artifact': 'UnityAVSupport-RustDesk-source (download from the same workflow run)',
     }
     if platform == 'windows':
+        manifest['id_server'] = 'codehalter.does-it.net'
+        manifest['relay_server'] = 'codehalter.does-it.net:21117'
+        manifest['public_key'] = 'Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM='
         manifest['api_server'] = 'https://support.unityavs.com'
         manifest['desktop_shortcut_label'] = 'Unity AVS Support'
     (output / 'build-info.json').write_text(json.dumps(manifest, indent=2) + '\n')

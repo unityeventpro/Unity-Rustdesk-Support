@@ -5,9 +5,12 @@ administrator prompt. The default destination is C:\Program Files\RustDesk.
 Keep Desktop Icon selected to create the Unity AVS Support shortcut. Its icon
 contains the enlarged blue/red logo with Unity AV Support beneath it.
 
-The ID/relay server and public key are built in. API Server defaults to
-https://support.unityavs.com, so fresh clients register inventory and heartbeats
-in the Unity dashboard. Existing explicitly saved network settings take priority.
+All four Network settings have explicit built-in Windows defaults:
+  ID Server: codehalter.does-it.net
+  Relay Server: codehalter.does-it.net:21117
+  API Server: https://support.unityavs.com
+  Key: Ywyx6CcyXMZBa1XwZDshiiXXtkwReMJ4ejXaE6u4CkM=
+Fresh clients register inventory and heartbeats in the Unity dashboard. Existing explicitly saved network settings take priority.
 Keep RustDesk running (or its installed service enabled) for online status.
 
 Automatic inventory does not grant unattended access or assign an address book.

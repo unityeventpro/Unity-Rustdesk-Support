@@ -798,13 +798,13 @@ jobs:
       run: |
         TAG="unity-v${VERSION}-windows-${GITHUB_RUN_NUMBER}"
         cat > release/notes.md <<'NOTES'
-        Windows x64 installer with automatic dashboard API configuration and updated Unity branding.
+        Windows x64 installer with all four server settings preconfigured and updated Unity branding.
 
         Download **UnityAVSupport-Windows-Install.exe**, open it and choose Install. The desktop shortcut is **Unity AVS Support**, with the enlarged logo and **Unity AV Support** beneath it.
 
-        Fresh clients default API Server to **https://support.unityavs.com** for device inventory and heartbeats. Existing explicit API settings take priority. This does not grant unattended access or automatically assign address books; no credentials or shared passwords are embedded.
+        Fresh clients prefill ID Server **codehalter.does-it.net**, Relay Server **codehalter.does-it.net:21117**, API Server **https://support.unityavs.com**, and the Unity RustDesk server public key. Inventory and heartbeats register automatically. Existing explicit saved network settings take priority. This does not grant unattended access or automatically assign address books; no credentials or shared passwords are embedded.
 
-        Validation: compiled API URL and shortcut label, x64 EXEs, matching generated launcher resources, and package checksums passed. A fresh Windows installation/enrollment test is still required before broad rollout. Windows remains unsigned; contact your technician if blocked by Windows or company policy.
+        Validation: compiled ID/relay/API addresses, public key and shortcut label, x64 EXEs, matching generated launcher resources, and package checksums passed. A fresh Windows installation/enrollment test is still required before broad rollout. Windows remains unsigned; contact your technician if blocked by Windows or company policy.
 
         Corresponding modified RustDesk source, license, installation instructions, build provenance and SHA256SUMS accompany the installer. Mac and Linux builds are separate.
         NOTES
